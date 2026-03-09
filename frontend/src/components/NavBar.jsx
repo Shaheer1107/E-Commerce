@@ -1,17 +1,20 @@
 import React, { useContext, useState } from 'react';
 import { assets } from '../assets/assets';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 
 const NavBar = () => {
     const [visible, setVisible] = useState(false);
-    const {setShowSearch, getCartCount, navigate, token, setToken, setCartItems} = useContext(ShopContext);
+    const { setShowSearch, getCartCount, token, setToken, setCartItems } = useContext(ShopContext);
+    const navigate = useNavigate();
+
     const logout = () => {
       navigate('/login')
       localStorage.removeItem('token')
       setToken('')
       setCartItems({})
     }
+
   return (
     <div className="flex items-center justify-between py-5 font-medium">
       {/* Logo */}
@@ -54,7 +57,7 @@ const NavBar = () => {
           {token && <div className="hidden group-hover:block absolute right-0 pt-4 bg-white shadow-md rounded">
             <div className="flex flex-col gap-2 w-36 py-3 px-5 bg-slate-100 text-gray-500 rounded">
               <p className="cursor-pointer hover:text-black">My Profile</p>
-              <p onClick={()=> navigate('/orders')} className="cursor-pointer hover:text-black">Orders</p>
+              <p onClick={() => navigate('/orders')} className="cursor-pointer hover:text-black">Orders</p>
               <p onClick={logout} className="cursor-pointer hover:text-black">Logout</p>
             </div>
           </div>}
@@ -66,20 +69,21 @@ const NavBar = () => {
             {getCartCount()}
           </p>
         </Link>
-        <img onClick={()=>setVisible(true)} src={assets.menu_icon} className='w-5 cursor-pointer sm:hidden' alt="" />
+        <img onClick={() => setVisible(true)} src={assets.menu_icon} className='w-5 cursor-pointer sm:hidden' alt="" />
       </div>
+
       <div className={`absolute top-0 right-0 bottom-0 overflow-hidden bg-white transition-all ${visible ? 'w-full' : 'w-0'}`}>
         <div className="flex flex-col text-gray-600">
-            <div onClick={() => setVisible(false)} className="flex items-center gap-4 p-3">
+          <div onClick={() => setVisible(false)} className="flex items-center gap-4 p-3">
             <img src={assets.dropdown_icon} className="h-4 rotate-180" alt="" />
             <p>Back</p>
-            </div>
-            <NavLink onClick={()=>setVisible(false)} className='py-2 pl-6 border' to="/">HOME</NavLink>
-            <NavLink onClick={()=>setVisible(false)} className='py-2 pl-6 border' to="/collection">COLLECTION</NavLink>
-            <NavLink onClick={()=>setVisible(false)} className='py-2 pl-6 border' to="/about">ABOUT</NavLink>
-            <NavLink onClick={()=>setVisible(false)} className='py-2 pl-6 border' to="/contact">CONTACT</NavLink>
+          </div>
+          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to="/">HOME</NavLink>
+          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to="/collection">COLLECTION</NavLink>
+          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to="/about">ABOUT</NavLink>
+          <NavLink onClick={() => setVisible(false)} className='py-2 pl-6 border' to="/contact">CONTACT</NavLink>
         </div>
-        </div>
+      </div>
     </div>
   );
 };

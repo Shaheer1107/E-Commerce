@@ -9,13 +9,12 @@ const SearchBar = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if(location.pathname.includes('collection') && showSearch){
+    if (location.pathname.includes('collection') && showSearch) {
       setVisible(true);
-    }
-    else{
+    } else {
       setVisible(false);
     }
-  }, [location])
+  }, [location, showSearch]) // Fixed: added showSearch to dependencies
 
   return showSearch && visible ? (
     <div className="border-t border-b bg-gray-50 text-center">
