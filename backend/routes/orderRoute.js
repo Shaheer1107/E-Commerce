@@ -1,7 +1,6 @@
 import express from 'express'
 import {
     placeOrder,
-    placeOrderRazorpay,
     placeOrderStripe,
     verifyStripe,         
     allOrders,
@@ -20,7 +19,6 @@ orderRouter.post('/status', adminAuth, updateStatus)
 // Payment features
 orderRouter.post('/place', authUser, placeOrder)
 orderRouter.post('/stripe', authUser, placeOrderStripe)
-orderRouter.post('/razorpay', authUser, placeOrderRazorpay)
 
 // ✅ New: Stripe verification — called by frontend after redirect back from Stripe
 orderRouter.post('/verifyStripe', authUser, verifyStripe)

@@ -127,17 +127,6 @@ const verifyStripe = async (req, res) => {
     }
 }
 
-// ─── RAZORPAY (placeholder) ──────────────────────────────────────────────────
-
-const placeOrderRazorpay = async (req, res) => {
-    try {
-        res.json({ success: false, message: "Razorpay not yet configured." })
-    }
-    catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
-    }
-}
 
 // ─── ADMIN ───────────────────────────────────────────────────────────────────
 
@@ -182,4 +171,4 @@ const updateStatus = async (req, res) => {
     }
 }
 
-export { placeOrder, placeOrderRazorpay, placeOrderStripe, verifyStripe, allOrders, updateStatus, userOrders }
+export { placeOrder, placeOrderStripe, verifyStripe, allOrders, updateStatus, userOrders }
