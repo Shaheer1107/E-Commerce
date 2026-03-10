@@ -1,5 +1,13 @@
 import express from 'express'
-import { placeOrder, placeOrderRazorpay, placeOrderStripe, updateStatus, allOrders, userOrders } from '../controllers/orderController.js'
+import {
+    placeOrder,
+    placeOrderRazorpay,
+    placeOrderStripe,
+    verifyStripe,         
+    allOrders,
+    updateStatus,
+    userOrders
+} from '../controllers/orderController.js'
 import adminAuth from '../middleware/adminAuth.js'
 import authUser from '../middleware/auth.js'
 
@@ -14,7 +22,10 @@ orderRouter.post('/place', authUser, placeOrder)
 orderRouter.post('/stripe', authUser, placeOrderStripe)
 orderRouter.post('/razorpay', authUser, placeOrderRazorpay)
 
+// ✅ New: Stripe verification — called by frontend after redirect back from Stripe
+orderRouter.post('/verifyStripe', authUser, verifyStripe)
+
 // User features
 orderRouter.post('/userorders', authUser, userOrders)
 
-export default orderRouter;
+export default orderRouter
