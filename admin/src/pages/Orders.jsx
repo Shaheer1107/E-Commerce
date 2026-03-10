@@ -12,12 +12,12 @@ const Orders = ({ token }) => {
 
     try {
       const response = await axios.post(
-        `${backendUrl}api/order/list`,
+        `${backendUrl}/api/order/list`,    // ✅ Fixed: was missing / before api
         {},
         { headers: { token } }
       );
       if (response.data.success) {
-        setOrders(response.data.orders);
+        setOrders(response.data.orders.reverse()); // ✅ newest orders shown first
       } else {
         toast.error(response.data.message);
       }
@@ -85,12 +85,11 @@ const Orders = ({ token }) => {
             <div>
               <p className="text-sm sm:text-[15px]">Items: {order.items.length}</p>
               <p className="mt-3">Method: {order.paymentMethod}</p>
-              <p>Payment: {order.payment}</p>
+              <p>Payment: {order.payment ? 'Done' : 'Pending'}</p>  {/* ✅ Fixed: was showing true/false, now shows Done/Pending */}
               <p>Date: {new Date(order.date).toLocaleDateString()}</p>
             </div>
             <p className="text-sm sm:text-[15px]">
-              {currency}
-              {order.amount}
+              {currency}{order.amount}
             </p>
             <select
               onChange={(event) => statusHandler(event, order._id)}
@@ -100,7 +99,7 @@ const Orders = ({ token }) => {
               <option value="Order Placed">Order Placed</option>
               <option value="Packing">Packing</option>
               <option value="Shipped">Shipped</option>
-              <option value="Out for delivery">Out for delivery</option>
+              <option value="Out for Delivery">Out for Delivery</option>  {/* ✅ Fixed: capitalised 'D' to match backend validStatuses */}
               <option value="Delivered">Delivered</option>
             </select>
           </div>
