@@ -46,8 +46,7 @@ const PlaceOrder = () => {
           }
         });
       });
-      console.log(formData);
-      
+
       let orderData = {
         address: formData,
         items: orderItems,
@@ -55,8 +54,14 @@ const PlaceOrder = () => {
       };
 
       switch (method) {
-        case 'cod':
-          const response = await axios.post(`${backendUrl}/api/order/place`, orderData, { headers: { token } });
+
+        // ── Cash on Delivery ────────────────────────────────────────────────
+        case 'cod': {
+          const response = await axios.post(
+            `${backendUrl}/api/order/place`,
+            orderData,
+            { headers: { token } }
+          );
           if (response.data.success) {
             setCartItems({});
             navigate('/orders');
@@ -64,6 +69,27 @@ const PlaceOrder = () => {
             toast.error(response.data.message);
           }
           break;
+        }
+
+        // ── Stripe ──────────────────────────────────────────────────────────
+        case 'stripe': {
+          // Step 1: Ask the backend to create a Stripe session
+          const stripeResponse = await axios.post(
+            `${backendUrl}/api/order/stripe`,
+            orderData,
+            { headers: { token } }
+          );
+
+          if (stripeResponse.data.success) {
+            // Step 2: Redirect user to Stripe's hosted payment page
+            // Stripe will redirect back to /verify?success=...&orderId=... when done
+            window.location.replace(stripeResponse.data.session_url);
+          } else {
+            toast.error(stripeResponse.data.message);
+          }
+          break;
+        }
+
         default:
           break;
       }
@@ -107,7 +133,7 @@ const PlaceOrder = () => {
               <img className={`h-5 mx-4`} src={assets.stripe_logo} alt="Stripe" />
             </div>
             <div onClick={() => setMethod('razorpay')} className='flex items-center gap-3 border p-2 px-3 cursor-pointer'>
-              <p className={`min-w-3.5 h-3.5 border rounded-full ${method === 'razorpay' ? 'bg-green-400' : ''}`} ></p>
+              <p className={`min-w-3.5 h-3.5 border rounded-full ${method === 'razorpay' ? 'bg-green-400' : ''}`}></p>
               <img className={`h-5 mx-4`} src={assets.razorpay_logo} alt="Razorpay" />
             </div>
             <div onClick={() => setMethod('cod')} className='flex items-center gap-3 border p-2 px-3 cursor-pointer'>
