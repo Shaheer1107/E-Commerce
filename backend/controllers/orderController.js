@@ -1,9 +1,8 @@
 import orderModel from "../models/orderModel.js"
 import userModel from "../models/userModel.js"
 import Stripe from "stripe"
-import crypto from "crypto"
 
-const stripe    = new Stripe(process.env.STRIPE_SECRET_KEY)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 // ─── Shared validation ────────────────────────────────────────────────────────
 const validateOrderBody = ({ userId, items, amount, address }) => {
@@ -33,7 +32,7 @@ const placeOrder = async (req, res) => {
     }
     catch (error) {
         console.error("placeOrder error:", error)
-        res.status(500).json({ success: false, message: error.message })
+        res.status(500).json({ success: false, message: "Server error" })
     }
 }
 
@@ -74,8 +73,10 @@ const placeOrderStripe = async (req, res) => {
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             line_items,
-            mode: "payment",
-            success_url: `${frontend_url}/verify?success=true&orderId=${newOrder._id}`,
+            mode:        "payment",
+            // ✅ We pass the sessionId back in the success URL
+            //    so verifyStripe can look it up with the Stripe API
+            success_url: `${frontend_url}/verify?success=true&orderId=${newOrder._id}&sessionId={CHECKOUT_SESSION_ID}`,
             cancel_url:  `${frontend_url}/verify?success=false&orderId=${newOrder._id}`,
         })
 
@@ -83,51 +84,64 @@ const placeOrderStripe = async (req, res) => {
     }
     catch (error) {
         console.error("placeOrderStripe error:", error)
-        res.status(500).json({ success: false, message: error.message })
+        res.status(500).json({ success: false, message: "Server error" })
     }
 }
 
+// ─── VERIFY STRIPE ────────────────────────────────────────────────────────────
+// ✅ SECURITY FIX — original trusted `success=true` from the request body.
+//    That means anyone could mark any order as paid for free just by sending:
+//    POST /api/order/verifyStripe { success: "true", orderId: "...", userId: "..." }
+//
+//    Fix: we receive the Stripe sessionId from the frontend (which Stripe puts
+//    in the redirect URL as {CHECKOUT_SESSION_ID}), then ask Stripe directly
+//    whether that session's payment_status is "paid". We never trust the client.
 const verifyStripe = async (req, res) => {
     try {
-        const { orderId, success, userId } = req.body
-        if (!orderId || !userId) return res.status(400).json({ success: false, message: "Missing orderId or userId" })
+        const { orderId, sessionId, userId } = req.body
 
-        if (success === "true") {
+        if (!orderId || !userId || !sessionId) {
+            return res.status(400).json({ success: false, message: "Missing required fields" })
+        }
+
+        // ✅ Ask Stripe directly — this is the only trustworthy source of truth
+        const session = await stripe.checkout.sessions.retrieve(sessionId)
+
+        if (session.payment_status === "paid") {
+            // ✅ Payment confirmed by Stripe — mark as paid and clear cart
             await orderModel.findByIdAndUpdate(orderId, { payment: true })
             await userModel.findByIdAndUpdate(userId, { cartData: {} })
-            res.json({ success: true, message: "Payment Successful" })
-        } else {
-            await orderModel.findByIdAndDelete(orderId)
-            res.json({ success: false, message: "Payment Cancelled" })
+            return res.json({ success: true, message: "Payment Verified" })
         }
+
+        // ✅ Payment not completed — delete the pending order
+        await orderModel.findByIdAndDelete(orderId)
+        res.json({ success: false, message: "Payment not completed" })
     }
     catch (error) {
         console.error("verifyStripe error:", error)
-        res.status(500).json({ success: false, message: error.message })
+        res.status(500).json({ success: false, message: "Server error" })
     }
 }
 
-
-
-// ─── USER: view their orders (order tracking) ─────────────────────────────────
+// ─── USER: view their orders ──────────────────────────────────────────────────
 const userOrders = async (req, res) => {
     try {
         const { userId } = req.body
         const orders = await orderModel
             .find({ userId })
-            .sort({ date: -1 })   // newest first
+            .sort({ date: -1 })
             .select('items amount address status paymentMethod payment date')
 
         res.json({ success: true, orders })
     }
     catch (error) {
         console.error("userOrders error:", error)
-        res.status(500).json({ success: false, message: error.message })
+        res.status(500).json({ success: false, message: "Server error" })
     }
 }
 
-// ─── USER: cancel their own order ─────────────────────────────────────────────
-// Only allowed before the order has been shipped
+// ─── USER: cancel their own order ────────────────────────────────────────────
 const cancelOrder = async (req, res) => {
     try {
         const { orderId, userId } = req.body
@@ -136,7 +150,6 @@ const cancelOrder = async (req, res) => {
         const order = await orderModel.findById(orderId)
         if (!order) return res.status(404).json({ success: false, message: "Order not found" })
 
-        // ✅ Security: confirm the order actually belongs to this user
         if (order.userId.toString() !== userId.toString()) {
             return res.status(403).json({ success: false, message: "Not authorised to cancel this order" })
         }
@@ -153,7 +166,7 @@ const cancelOrder = async (req, res) => {
     }
     catch (error) {
         console.error("cancelOrder error:", error)
-        res.status(500).json({ success: false, message: error.message })
+        res.status(500).json({ success: false, message: "Server error" })
     }
 }
 
@@ -177,7 +190,7 @@ const allOrders = async (req, res) => {
     }
     catch (error) {
         console.error("allOrders error:", error)
-        res.status(500).json({ success: false, message: error.message })
+        res.status(500).json({ success: false, message: "Server error" })
     }
 }
 
@@ -204,13 +217,13 @@ const updateStatus = async (req, res) => {
     }
     catch (error) {
         console.error("updateStatus error:", error)
-        res.status(500).json({ success: false, message: error.message })
+        res.status(500).json({ success: false, message: "Server error" })
     }
 }
 
 export {
     placeOrder,
-    placeOrderStripe,  verifyStripe,
+    placeOrderStripe, verifyStripe,
     userOrders, cancelOrder,
     allOrders, updateStatus
 }
