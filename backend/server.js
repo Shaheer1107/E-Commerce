@@ -7,6 +7,7 @@ import applyRoutes from './middleware/applyRoutes.js'
 import { notFound, errorHandler } from './middleware/errorHandler.js'
 
 const app  = express()
+app.set('trust proxy', 1)
 const port = process.env.PORT || 4000
 
 connectDB()
