@@ -1,31 +1,52 @@
 import React, { useContext } from 'react'
 import { ShopContext } from '../context/ShopContext'
-import Title from './Title';
 
 const CartTotal = () => {
-    const {currency, delivery_fee, getCartAmount} = useContext(ShopContext);
+  const { currency, delivery_fee, getCartAmount } = useContext(ShopContext);
+  const subtotal = getCartAmount();
+  const total    = subtotal === 0 ? 0 : subtotal + delivery_fee;
+
   return (
-    <div className='w-full'>
-        <div className='text-2xl'>
-            <Title text1={'CART'} text2={'TOTALS'}/>
+    <>
+      <style>{`
+        .ct-totals { width: 100%; display: flex; flex-direction: column; gap: 0; }
+        .ct-totals-row {
+          display: flex; justify-content: space-between; align-items: baseline;
+          padding: 12px 0; border-bottom: 1px solid #f0ebe3;
+        }
+        .ct-totals-row:first-child { border-top: 1px solid #f0ebe3; }
+        .ct-totals-label {
+          font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 400;
+          letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f72;
+        }
+        .ct-totals-value {
+          font-family: 'Cormorant Garamond', serif; font-size: 17px;
+          font-weight: 400; color: #1a1612;
+        }
+        .ct-totals-row--total .ct-totals-label {
+          font-weight: 600; color: #1a1612;
+        }
+        .ct-totals-row--total .ct-totals-value {
+          font-size: 22px; color: #1a1612;
+        }
+        .ct-totals-row--total { border-bottom: none; padding-top: 14px; }
+      `}</style>
+
+      <div className="ct-totals">
+        <div className="ct-totals-row">
+          <span className="ct-totals-label">Subtotal</span>
+          <span className="ct-totals-value">{currency}{subtotal}.00</span>
         </div>
-        <div className='flex flex-col gap-2 mt-2 text-sm'>
-            <div className='flex justify-between'>
-                <p>Subtotal</p>
-                <p>{currency} {getCartAmount()}.00</p>
-            </div>
-            <hr />
-            <div className='flex justify-between'>
-                <p>Shipping Fee</p>
-                <p>{currency} {delivery_fee}</p>
-            </div>
-            <hr />
-            <div className='flex justify-between'>
-                <p>Total</p>
-                <p>{currency} {getCartAmount === 0 ? 0 : getCartAmount() + delivery_fee}</p>
-            </div>
+        <div className="ct-totals-row">
+          <span className="ct-totals-label">Shipping</span>
+          <span className="ct-totals-value">{currency}{delivery_fee}</span>
         </div>
-    </div>
+        <div className="ct-totals-row ct-totals-row--total">
+          <span className="ct-totals-label">Total</span>
+          <span className="ct-totals-value">{currency}{total}</span>
+        </div>
+      </div>
+    </>
   )
 }
 

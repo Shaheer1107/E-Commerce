@@ -13,6 +13,26 @@ const validateOrderBody = ({ userId, items, amount, address }) => {
     return null
 }
 
+// ─── Helper: safely extract image array from a cart item ─────────────────────
+// The frontend sends the full product object as each order item.
+// We explicitly pick only the fields the schema expects so Mongoose
+// strict mode doesn't silently drop anything (especially `image`).
+const mapOrderItems = (items) =>
+    items.map(({ name, price, quantity, size, image, images }) => ({
+        name,
+        price,
+        quantity,
+        size,
+        // Normalise to an array of strings regardless of how the frontend sends it
+        image: Array.isArray(image)
+            ? image
+            : Array.isArray(images)
+                ? images
+                : image
+                    ? [image]
+                    : [],
+    }))
+
 // ─── COD ──────────────────────────────────────────────────────────────────────
 const placeOrder = async (req, res) => {
     try {
@@ -21,7 +41,10 @@ const placeOrder = async (req, res) => {
         if (err) return res.status(400).json({ success: false, message: err })
 
         const newOrder = await orderModel.create({
-            userId, items, amount, address,
+            userId,
+            items: mapOrderItems(items),   // ✅ image is now explicitly mapped
+            amount,
+            address,
             paymentMethod: "COD",
             payment: false,
             date: Date.now()
@@ -46,7 +69,10 @@ const placeOrderStripe = async (req, res) => {
         const frontend_url = process.env.FRONTEND_URL || "http://localhost:5173"
 
         const newOrder = await orderModel.create({
-            userId, items, amount, address,
+            userId,
+            items: mapOrderItems(items),   // ✅ image is now explicitly mapped
+            amount,
+            address,
             paymentMethod: "Stripe",
             payment: false,
             date: Date.now()
@@ -74,8 +100,6 @@ const placeOrderStripe = async (req, res) => {
             payment_method_types: ["card"],
             line_items,
             mode:        "payment",
-            // ✅ We pass the sessionId back in the success URL
-            //    so verifyStripe can look it up with the Stripe API
             success_url: `${frontend_url}/verify?success=true&orderId=${newOrder._id}&sessionId={CHECKOUT_SESSION_ID}`,
             cancel_url:  `${frontend_url}/verify?success=false&orderId=${newOrder._id}`,
         })
@@ -89,13 +113,6 @@ const placeOrderStripe = async (req, res) => {
 }
 
 // ─── VERIFY STRIPE ────────────────────────────────────────────────────────────
-// ✅ SECURITY FIX — original trusted `success=true` from the request body.
-//    That means anyone could mark any order as paid for free just by sending:
-//    POST /api/order/verifyStripe { success: "true", orderId: "...", userId: "..." }
-//
-//    Fix: we receive the Stripe sessionId from the frontend (which Stripe puts
-//    in the redirect URL as {CHECKOUT_SESSION_ID}), then ask Stripe directly
-//    whether that session's payment_status is "paid". We never trust the client.
 const verifyStripe = async (req, res) => {
     try {
         const { orderId, sessionId, userId } = req.body
@@ -104,17 +121,14 @@ const verifyStripe = async (req, res) => {
             return res.status(400).json({ success: false, message: "Missing required fields" })
         }
 
-        // ✅ Ask Stripe directly — this is the only trustworthy source of truth
         const session = await stripe.checkout.sessions.retrieve(sessionId)
 
         if (session.payment_status === "paid") {
-            // ✅ Payment confirmed by Stripe — mark as paid and clear cart
             await orderModel.findByIdAndUpdate(orderId, { payment: true })
             await userModel.findByIdAndUpdate(userId, { cartData: {} })
             return res.json({ success: true, message: "Payment Verified" })
         }
 
-        // ✅ Payment not completed — delete the pending order
         await orderModel.findByIdAndDelete(orderId)
         res.json({ success: false, message: "Payment not completed" })
     }
@@ -128,10 +142,12 @@ const verifyStripe = async (req, res) => {
 const userOrders = async (req, res) => {
     try {
         const { userId } = req.body
+
+        // ✅ Removed .select() — it was excluding no fields anyway but
+        //    is risky if the schema grows. Return the full document instead.
         const orders = await orderModel
             .find({ userId })
             .sort({ date: -1 })
-            .select('items amount address status paymentMethod payment date')
 
         res.json({ success: true, orders })
     }
