@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -12,6 +12,8 @@ const Login = () => {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
+
+  const location = useLocation();
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
@@ -43,7 +45,7 @@ const Login = () => {
   };
 
   useEffect(() => {
-    if (token) navigate('/');
+    if (token) navigate(location.state?.from || '/');
   }, [token]);
 
   const isLogin = currentState === 'Login';

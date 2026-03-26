@@ -1,12 +1,12 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
 import { assets } from '../assets/assets';
 import RelatedProducts from '../components/RelatedProducts';
 
 const Product = () => {
   const { productId } = useParams();
-  const { products, currency, addToCart } = useContext(ShopContext);
+  const { products, currency, addToCart, token } = useContext(ShopContext);
   const [productData, setProductData] = useState(null);
   const [image, setImage] = useState('');
   const [size, setSize] = useState('');
@@ -25,7 +25,13 @@ const Product = () => {
     fetchProductData();
   }, [productId, products]);
 
+  const navigate = useNavigate();
+
   const handleAddToCart = () => {
+    if (!token) {          // ← add this check
+    navigate('/login', { state: { from: `/product/${productData._id}` } });
+    return;
+  }
     addToCart(productData._id, size);
     if (size) {
       setAdded(true);
