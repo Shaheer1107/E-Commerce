@@ -1,16 +1,27 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { assets } from "../assets/assets";
 import { ShopContext } from "../context/ShopContext";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 
 const NavBar = () => {
   const [visible, setVisible] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const { setShowSearch, getCartCount, token, setToken, setCartItems } =
     useContext(ShopContext);
   const navigate = useNavigate();
 
   const location = useLocation();
   const isCollection = location.pathname.includes("collection");
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest("#profile-wrap")) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
   const logout = () => {
     navigate("/login");
@@ -76,33 +87,44 @@ const NavBar = () => {
             {isCollection && <div className="w-px h-5 bg-[#e2ddd6] mx-1" />}
 
             {/* Profile dropdown */}
-            <div className="relative group">
+            <div className="relative" id="profile-wrap">
               <button
-                onClick={() => !token && navigate("/login")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!token) {
+                    navigate("/login");
+                    return;
+                  }
+                  setDropdownOpen((prev) => !prev);
+                }}
                 className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#ede9e2] transition-colors"
               >
                 <img src={assets.profile_icon} className="w-4" alt="Profile" />
               </button>
 
-              {token && (
+              {token && dropdownOpen && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-44 bg-white border border-[#e8e4de] overflow-hidden
-                                opacity-0 pointer-events-none translate-y-[-6px]
-                                group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0
-                                transition-all duration-200 ease-out z-50"
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-2 w-44 bg-white border border-[#e8e4de] overflow-hidden z-50"
                   style={{ borderRadius: "2px" }}
                 >
                   <div className="px-4 py-2.5 text-[11px] tracking-widest text-[#555] hover:bg-[#faf8f5] hover:text-[#1c1c1a] hover:pl-5 transition-all duration-150 cursor-pointer border-b border-[#f4f1ec]">
                     My Profile
                   </div>
                   <div
-                    onClick={() => navigate("/orders")}
+                    onClick={() => {
+                      navigate("/orders");
+                      setDropdownOpen(false);
+                    }}
                     className="px-4 py-2.5 text-[11px] tracking-widest text-[#555] hover:bg-[#faf8f5] hover:text-[#1c1c1a] hover:pl-5 transition-all duration-150 cursor-pointer border-b border-[#f4f1ec]"
                   >
                     Orders
                   </div>
                   <div
-                    onClick={logout}
+                    onClick={() => {
+                      logout();
+                      setDropdownOpen(false);
+                    }}
                     className="px-4 py-2.5 text-[11px] tracking-widest text-red-400 hover:bg-[#faf8f5] hover:text-red-600 hover:pl-5 transition-all duration-150 cursor-pointer"
                   >
                     Logout
