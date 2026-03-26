@@ -1,95 +1,132 @@
-import userModel from "../models/userModel.js";
-import validator from 'validator';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import userModel from "../models/userModel.js"
+import validator from 'validator'
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
+
+const MAX_LOGIN_ATTEMPTS = 5
+const LOCK_DURATION_MS   = 15 * 60 * 1000   // 15 minutes
 
 const createToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET)
+    return jwt.sign({ id }, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+    })
 }
 
-// Route for user login
+// ─── Login ────────────────────────────────────────────────────────────────────
 const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body
 
         if (!email || !password) {
-            return res.json({ success: false, message: "Email and password are required" });
+            return res.status(400).json({ success: false, message: "Email and password are required" })
         }
 
-        const user = await userModel.findOne({ email });
+        const user = await userModel.findOne({ email: email.toLowerCase().trim() })
+
         if (!user) {
-            return res.json({ success: false, message: "User doesn't exist" })
+            return res.status(401).json({ success: false, message: "Invalid email or password" })
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
+        if (user.isLocked) {
+            const minutesLeft = Math.ceil((user.lockUntil - Date.now()) / 60000)
+            return res.status(423).json({
+                success: false,
+                message: `Account locked due to too many failed attempts. Try again in ${minutesLeft} minute(s).`
+            })
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password)
+
         if (!isMatch) {
-            return res.json({ success: false, message: "Invalid password" });
+            const attempts = user.loginAttempts + 1
+            const update   = attempts >= MAX_LOGIN_ATTEMPTS
+                ? { loginAttempts: attempts, lockUntil: new Date(Date.now() + LOCK_DURATION_MS) }
+                : { loginAttempts: attempts }
+
+            await userModel.findByIdAndUpdate(user._id, update)
+            return res.status(401).json({ success: false, message: "Invalid email or password" })
         }
 
-        const token = createToken(user._id);
-        res.json({ success: true, token });
-    }
-    catch (error) {               
-        console.error(error);
-        res.json({ success: false, message: error.message });
-    }
-}
+        await userModel.findByIdAndUpdate(user._id, { loginAttempts: 0, lockUntil: null })
 
-// Route for user register
-const registerUser = async (req, res) => {
-    try {
-        const { name, email, password } = req.body;
-
-        if (!name || !email || !password) {
-            return res.json({ success: false, message: "All fields are required" });
-        }
-
-        const exists = await userModel.findOne({ email });
-        if (exists) {
-            return res.json({ success: false, message: "User already exists" });
-        }
-        if (!validator.isEmail(email)) {
-            return res.json({ success: false, message: "Please enter a valid email" });
-        }
-        if (password.length < 8) {
-            return res.json({ success: false, message: "Please enter a strong password (min 8 characters)" });
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        const newUser = new userModel({ name, email, password: hashedPassword });
-        const user = await newUser.save();
-
-        const token = createToken(user._id);
-        res.json({ success: true, token });
+        const token = createToken(user._id)
+        res.json({ success: true, token })
     }
     catch (error) {
-        console.log(error);
-        res.json({ success: false, message: error.message });
+        console.error("loginUser error:", error)
+        res.status(500).json({ success: false, message: error.message })
     }
 }
 
-// Route for admin login
+// ─── Register ─────────────────────────────────────────────────────────────────
+const registerUser = async (req, res) => {
+    try {
+        const { name, email, password } = req.body
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ success: false, message: "All fields are required" })
+        }
+        if (!validator.isEmail(email)) {
+            return res.status(400).json({ success: false, message: "Please enter a valid email" })
+        }
+        if (password.length < 8) {
+            return res.status(400).json({ success: false, message: "Password must be at least 8 characters" })
+        }
+        if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
+            return res.status(400).json({ success: false, message: "Password must contain letters and numbers" })
+        }
+
+        const exists = await userModel.findOne({ email: email.toLowerCase().trim() })
+        if (exists) {
+            return res.status(409).json({ success: false, message: "User already exists" })
+        }
+
+        const salt           = await bcrypt.genSalt(12)
+        const hashedPassword = await bcrypt.hash(password, salt)
+
+        const user  = await userModel.create({
+            name:     name.trim(),
+            email:    email.toLowerCase().trim(),
+            password: hashedPassword
+        })
+
+        const token = createToken(user._id)
+        res.status(201).json({ success: true, token })
+    }
+    catch (error) {
+        console.error("registerUser error:", error)
+        res.status(500).json({ success: false, message: error.message })
+    }
+}
+
+// ─── Admin Login ──────────────────────────────────────────────────────────────
 const adminLogin = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body
 
         if (!email || !password) {
-            return res.json({ success: false, message: "Email and password are required" });
+            return res.status(400).json({ success: false, message: "Email and password are required" })
         }
 
         if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-            const token = jwt.sign(email + password, process.env.JWT_SECRET);
-            res.json({ success: true, token });
+            // ✅ Fixed: was jwt.sign(email + password, ...) — a plain string payload
+            //    jwt.sign() only accepts expiresIn when the payload is an object
+            //    Wrapping in { data: ... } makes it a valid object payload
+            const token = jwt.sign(
+                { data: email + password },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.ADMIN_JWT_EXPIRES_IN || '1d' }
+            )
+            res.json({ success: true, token })
         } else {
-            res.json({ success: false, message: "Invalid email or password" });
+            await new Promise(r => setTimeout(r, 500))
+            res.status(401).json({ success: false, message: "Invalid email or password" })
         }
     }
     catch (error) {
-        console.log(error);
-        res.json({ success: false, message: error.message });
+        console.error("adminLogin error:", error)
+        res.status(500).json({ success: false, message: error.message })
     }
 }
 
-export { loginUser, registerUser, adminLogin };
+export { loginUser, registerUser, adminLogin }
