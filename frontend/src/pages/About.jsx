@@ -11,13 +11,13 @@ const About = () => {
 
         {/* Left — warm light panel */}
         <div className="bg-[#faf8f5] text-[#0f0e0c] px-8 sm:px-14 py-20 flex flex-col justify-end gap-6 order-2 md:order-1">
-          <p className="text-[9px] tracking-[0.35em] uppercase text-[#b8a97a]">About us — Forever</p>
+          <p className="text-[9px] tracking-[0.35em] uppercase text-[#b8a97a]">About us — Textiles</p>
           <h1 className="text-[52px] sm:text-[64px] font-normal leading-none"
               style={{ fontFamily: "'Playfair Display', serif" }}>
             Style is<br />a form of<br /><em className="italic text-[#b8a97a]">self expression</em>
           </h1>
           <p className="text-[13px] leading-[1.9] text-[#555] font-light max-w-sm">
-            We built Forever for people who believe clothing is more than fabric — it's identity,
+            We built Textiles for people who believe clothing is more than fabric — it's identity,
             confidence, and a quiet statement to the world.
           </p>
           <div className="w-12 h-0.5 bg-[#0f0e0c]" />
@@ -25,7 +25,7 @@ const About = () => {
 
         {/* Right — full-bleed image */}
         <div className="relative min-h-[60vh] md:min-h-0 overflow-hidden order-1 md:order-2">
-          <img src={assets.about_img} alt="Forever" className="w-full h-full object-cover" />
+          <img src={assets.about_img} alt="Textiles" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-[rgba(15,14,12,0.35)]" />
           <div className="absolute top-10 right-10 bg-[#b8a97a] text-[#0f0e0c] text-[9px] tracking-[0.2em] uppercase px-4 py-2.5 font-medium">
             Est. 2016
@@ -63,7 +63,7 @@ const About = () => {
           <p className="text-[13px] leading-[1.9] text-[#888] font-light">
             Why does online shopping feel so transactional? We believed it could feel like discovery —
             browsing a space where every piece has been chosen with intention. Since 2016, we've built
-            Forever around that belief, growing from a small curated store to a destination for
+            Textiles around that belief, growing from a small curated store to a destination for
             thousands of customers worldwide.
           </p>
         </div>
@@ -125,7 +125,7 @@ const About = () => {
            style={{ fontFamily: "'Playfair Display', serif" }}>
           Shopping should feel like a discovery,<br />not a transaction.
         </p>
-        <div className="text-[9px] tracking-[0.3em] uppercase text-[#555]">Forever — our founding principle</div>
+        <div className="text-[9px] tracking-[0.3em] uppercase text-[#555]">Textiles — our founding principle</div>
       </section>
     </div>
   );

@@ -28,7 +28,7 @@ const Contact = () => {
         <div className="relative min-h-[55vh] md:min-h-0 overflow-hidden order-1 md:order-2">
           <img
             src={assets.contact_img}
-            alt="Contact Forever"
+            alt="Contact Textiles"
             className="w-full h-full object-cover"
             style={{ filter: 'grayscale(40%) brightness(0.7)' }}
           />
@@ -56,7 +56,7 @@ const Contact = () => {
           {
             icon: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></>,
             label: 'Email',
-            value: 'admin@forever.com',
+            value: 'admin@Textiles.com',
           },
         ].map(({ icon, icon2, label, value }, i) => (
           <div
@@ -88,7 +88,7 @@ const Contact = () => {
             className="text-[34px] sm:text-[42px] font-normal leading-[1.15] text-[#faf8f5]"
             style={{ fontFamily: "'Playfair Display', serif" }}
           >
-            Careers at<br /><em className="italic text-[#b8a97a]">Forever</em>
+            Careers at<br /><em className="italic text-[#b8a97a]">Textiles</em>
           </h2>
           <p className="text-[13px] text-[#666] font-light leading-[1.9] max-w-sm">
             We're always looking for passionate, creative people who want to shape the future

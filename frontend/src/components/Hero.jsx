@@ -513,7 +513,7 @@ const Hero = () => {
                 <path d="M1 5H13M9 1L13 5L9 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </a>
-            <a href="#bestsellers" className="btn-ghost">Bestsellers</a>
+            {/* <a href="#bestsellers" className="btn-ghost">Bestsellers</a> */}
           </div>
 
           <div className={`hero-stats ${loaded ? 'visible' : ''}`}>

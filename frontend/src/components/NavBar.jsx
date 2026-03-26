@@ -33,7 +33,7 @@ const NavBar = () => {
               <img src={assets.logo} className="w-32" alt="Logo" />
             ) : (
               <>
-                Forever<span className="text-[#b8a97a]">.</span>
+                Textiles<span className="text-[#b8a97a]">.</span>
               </>
             )}
           </Link>

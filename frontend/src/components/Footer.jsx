@@ -338,7 +338,7 @@ const Footer = () => {
         {/* Bottom bar */}
         <div className="footer-bottom">
           <p className="footer-copy">
-            © 2024 <span>Forever.com</span> — All rights reserved.
+            © 2024 <span>Textiles.com</span> — All rights reserved.
           </p>
           <div className="footer-legal">
             <a href="#">Terms of Use</a>
