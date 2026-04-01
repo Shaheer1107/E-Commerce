@@ -91,7 +91,7 @@ const placeOrderStripe = async (req, res) => {
             price_data: {
                 currency:     process.env.CURRENCY || "usd",
                 product_data: { name: "Delivery Fee" },
-                unit_amount:  200,
+                unit_amount:  1000,
             },
             quantity: 1,
         })

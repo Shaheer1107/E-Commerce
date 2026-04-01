@@ -8,30 +8,28 @@ import axios from 'axios';
 // and we immediately verify the result, then redirect to /orders or /cart
 
 const Verify = () => {
-  const { backendUrl, token, setCartItems } = useContext(ShopContext);
+  const { backendUrl, token, setCartItems, userId } = useContext(ShopContext); // 1. grab userId
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Stripe appends ?success=true&orderId=... or ?success=false&orderId=... to the URL
-  const success = searchParams.get('success');
-  const orderId = searchParams.get('orderId');
+  const success   = searchParams.get('success');
+  const orderId   = searchParams.get('orderId');
+  const sessionId = searchParams.get('sessionId'); // 2. grab sessionId from URL
 
   useEffect(() => {
     const verifyPayment = async () => {
       try {
         const response = await axios.post(
           `${backendUrl}/api/order/verifyStripe`,
-          { success, orderId },
+          { success, orderId, sessionId, userId }, // 3. send all required fields
           { headers: { token } }
         );
 
         if (response.data.success) {
-          // Payment confirmed — clear cart and go to orders page
           setCartItems({});
           toast.success('Payment successful!');
           navigate('/orders');
         } else {
-          // Payment cancelled or failed — go back to cart
           toast.error('Payment cancelled.');
           navigate('/cart');
         }
@@ -42,11 +40,11 @@ const Verify = () => {
       }
     };
 
-    // Only verify if we have both params — prevents running on accidental direct visits
-    if (success && orderId && token) {
+    if (success && orderId && sessionId && token) { // 4. also guard on sessionId
       verifyPayment();
     }
-  }, [token]); // re-runs if token loads after mount (e.g. on page refresh)
+  }, [token]);
+
 
   return (
     <div className='min-h-[60vh] flex items-center justify-center'>
