@@ -1,162 +1,109 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { setCartItems, addToCart as addToCartAction, updateQuantity as updateQtyAction, clearCart } from "../store/slices/cartSlice.js";
+import { setToken as setTokenAction, logout } from "../store/slices/authSlice";
+import { setProducts } from "../store/slices/productSlice";
+import { setSearch as setSearchAction, setShowSearch as setShowSearchAction } from "../store/slices/uiSlice.js";
 
 export const ShopContext = createContext();
 
 const ShopContextProvider = (props) => {
+  const currency = '$';
+  const delivery_fee = 10;
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const dispatch = useDispatch();
 
-    const currency = '$';
-    const delivery_fee = 10;
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  // Read from Redux instead of local useState
+  const token = useSelector(state => state.auth.token);
+  const cartItems = useSelector(state => state.cart.items);
+  const products = useSelector(state => state.products.list);
+  const search = useSelector(state => state.ui.search);
+  const showSearch = useSelector(state => state.ui.showSearch);
 
-    const [search, setSearch] = useState('');
-    const [showSearch, setShowSearch] = useState(false);
-    const [cartItems, setCartItems] = useState({});
-    const [products, setProducts] = useState([]);
-    // ✅ FIX 1: Read token from localStorage immediately — survives page refresh
-    const [token, setToken] = useState(localStorage.getItem('token') ?? '');
+  // Wrapper functions that dispatch to Redux
+  const setToken = (val) => dispatch(setTokenAction(val));
+  const setSearch = (val) => dispatch(setSearchAction(val));
+  const setShowSearch = (val) => dispatch(setShowSearchAction(val));
+  const setCartItemsContext = (val) => dispatch(setCartItems(val));
 
-    const addToCart = async (itemId, size) => {
-        if (!size) {
-            toast.error('Select Product Size');
-            return;
-        }
+  const addToCart = async (itemId, size) => {
+    if (!size) { toast.error('Select Product Size'); return; }
+    dispatch(addToCartAction({ itemId, size }));
+    if (token) {
+      try {
+        await axios.post(backendUrl + '/api/cart/add', { itemId, size }, { headers: { token } });
+      } catch (error) {
+        toast.error(error.message);
+      }
+    }
+  };
 
-        let cartData = structuredClone(cartItems);
+  const updateQuantity = async (itemId, size, quantity) => {
+    dispatch(updateQtyAction({ itemId, size, quantity }));
+    if (token) {
+      try {
+        await axios.post(backendUrl + '/api/cart/update', { itemId, size, quantity }, { headers: { token } });
+      } catch (error) {
+        toast.error(error.message);
+      }
+    }
+  };
 
-        if (cartData[itemId]) {
-            if (cartData[itemId][size]) {
-                cartData[itemId][size] += 1;
-            } else {
-                cartData[itemId][size] = 1;
-            }
-        } else {
-            cartData[itemId] = {};
-            cartData[itemId][size] = 1;
-        }
+  const getCartCount = () => {
+    let count = 0;
+    for (const id in cartItems)
+      for (const size in cartItems[id])
+        if (cartItems[id][size] > 0) count += cartItems[id][size];
+    return count;
+  };
 
-        setCartItems(cartData);
+  const getCartAmount = () => {
+    let total = 0;
+    for (const id in cartItems) {
+      const product = products.find(p => p._id === id);
+      if (!product) continue;
+      for (const size in cartItems[id])
+        if (cartItems[id][size] > 0)
+          total += product.price * cartItems[id][size];
+    }
+    return total;
+  };
 
-        if (token) {
-            try {
-                await axios.post(
-                    backendUrl + '/api/cart/add',
-                    { itemId, size },
-                    { headers: { token } }
-                );
-            } catch (error) {
-                console.log(error);
-                toast.error(error.message);
-            }
-        }
-    };
+  const getProductsData = async () => {
+    try {
+      const res = await axios.get(backendUrl + '/api/product/list');
+      if (res.data.success) dispatch(setProducts(res.data.products));
+      else toast.error(res.data.message);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
 
-    const getCartCount = () => {
-        let totalCount = 0;
-        for (const items in cartItems) {
-            for (const item in cartItems[items]) {
-                try {
-                    if (cartItems[items][item] > 0) {
-                        totalCount += cartItems[items][item];
-                    }
-                } catch (error) { }
-            }
-        }
-        return totalCount;
-    };
+  const loadUserCart = async (userToken) => {
+    try {
+      const res = await axios.post(backendUrl + '/api/cart/get', {}, { headers: { token: userToken } });
+      if (res.data.success) dispatch(setCartItems(res.data.cartData));
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
 
-    const updateQuantity = async (itemId, size, quantity) => {
-        let cartData = structuredClone(cartItems);
-        cartData[itemId][size] = quantity;
-        setCartItems(cartData);
+  useEffect(() => { getProductsData(); }, []);
+  useEffect(() => { if (token) loadUserCart(token); }, [token]);
 
-        if (token) {
-            try {
-                await axios.post(
-                    backendUrl + '/api/cart/update',
-                    { itemId, size, quantity },
-                    { headers: { token } }
-                );
-            } catch (error) {
-                console.log(error);
-                toast.error(error.message);
-            }
-        }
-    };
+  const value = {
+    products, currency, delivery_fee,
+    search, setSearch, showSearch, setShowSearch,
+    cartItems, setCartItems: setCartItemsContext,
+    addToCart, getCartCount, updateQuantity,
+    getCartAmount, backendUrl,
+    setToken, token,
+    logout: () => { dispatch(logout()); dispatch(clearCart()); }
+  };
 
-    const getCartAmount = () => {
-        let totalAmount = 0;
-        for (const items in cartItems) {
-            let itemInfo = products.find((product) => product._id === items);
-            for (const item in cartItems[items]) {
-                try {
-                    if (cartItems[items][item] > 0) {
-                        totalAmount += itemInfo.price * cartItems[items][item];
-                    }
-                } catch (error) { }
-            }
-        }
-        return totalAmount;
-    };
-
-    const getProductsData = async () => {
-        try {
-            const response = await axios.get(backendUrl + '/api/product/list');
-            if (response.data.success) {
-                setProducts(response.data.products);
-            } else {
-                toast.error(response.data.message);
-            }
-        } catch (error) {
-            console.log(error);
-            toast.error(error.message);
-        }
-    };
-
-    // ✅ FIX 2: Load saved cart from backend when token is available
-    const loadUserCart = async (userToken) => {
-        try {
-            const response = await axios.post(
-                backendUrl + '/api/cart/get',
-                {},
-                { headers: { token: userToken } }
-            );
-            if (response.data.success) {
-                setCartItems(response.data.cartData);
-            }
-        } catch (error) {
-            console.log(error);
-            toast.error(error.message);
-        }
-    };
-
-    // Fetch products on mount
-    useEffect(() => {
-        getProductsData();
-    }, []);
-
-    // ✅ FIX 3: When token is available (on mount or after login), load the user's cart
-    useEffect(() => {
-        if (token) {
-            loadUserCart(token);
-        }
-    }, [token]);
-
-    const value = {
-        products, currency, delivery_fee,
-        search, setSearch, showSearch, setShowSearch,
-        cartItems, setCartItems,
-        addToCart, getCartCount, updateQuantity,
-        getCartAmount, backendUrl,
-        setToken, token
-    };
-
-    return (
-        <ShopContext.Provider value={value}>
-            {props.children}
-        </ShopContext.Provider>
-    );
+  return <ShopContext.Provider value={value}>{props.children}</ShopContext.Provider>;
 };
 
 export default ShopContextProvider;

@@ -23,13 +23,18 @@ const NavBar = () => {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  const logout = () => {
-    navigate("/login");
-    localStorage.removeItem("token");
-    setToken("");
-    setCartItems({});
-  };
+  // const logout = () => {
+  //   navigate("/login");
+  //   localStorage.removeItem("token");
+  //   setToken("");
+  //   setCartItems({});
+  // };
 
+    const { logout } = useContext(ShopContext);
+    const handleLogout = () => {
+      logout();       // dispatches to Redux, clears cart + token
+      navigate('/login');
+};
   return (
     <>
       {/* Sticky Navbar */}
@@ -108,7 +113,8 @@ const NavBar = () => {
                   className="absolute right-0 top-full mt-2 w-44 bg-white border border-[#e8e4de] overflow-hidden z-50"
                   style={{ borderRadius: "2px" }}
                 >
-                  <div className="px-4 py-2.5 text-[11px] tracking-widest text-[#555] hover:bg-[#faf8f5] hover:text-[#1c1c1a] hover:pl-5 transition-all duration-150 cursor-pointer border-b border-[#f4f1ec]">
+                  <div onClick={() => { navigate('/profile'); setDropdownOpen(false); }}
+                   className="px-4 py-2.5 text-[11px] tracking-widest text-[#555] hover:bg-[#faf8f5] hover:text-[#1c1c1a] hover:pl-5 transition-all duration-150 cursor-pointer border-b border-[#f4f1ec]">
                     My Profile
                   </div>
                   <div
@@ -122,7 +128,7 @@ const NavBar = () => {
                   </div>
                   <div
                     onClick={() => {
-                      logout();
+                      handleLogout();
                       setDropdownOpen(false);
                     }}
                     className="px-4 py-2.5 text-[11px] tracking-widest text-red-400 hover:bg-[#faf8f5] hover:text-red-600 hover:pl-5 transition-all duration-150 cursor-pointer"
